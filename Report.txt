@@ -1,0 +1,99 @@
+*&---------------------------------------------------------------------*
+*& Report Z_J_TESTALV
+*&---------------------------------------------------------------------*
+*&
+*&---------------------------------------------------------------------*
+REPORT z_j_testalv.
+
+* Cargar la tabla SFLIGHT de la base de datos
+TABLES: sflight.
+* Cargamos los datos tipo slis
+TYPES: slis.
+* Definición de variables
+DATA: it_sflight TYPE TABLE OF sflight,
+     wa_sflight TYPE sflight.
+DATA: it_fieldcat TYPE slis_t_fieldcat_alv,
+      wa_fieldcat TYPE slis_fieldcat_alv.
+DATA: wa_layout TYPE slis_layout_alv.
+DATA: g_repid TYPE sy-repid.
+
+* SQL para copiar la tabla sflight a la tabla interna
+SELECT * FROM sflight INTO TABLE it_sflight.
+* Datos del is_layout para el ALV
+wa_layout-zebra = 'X'.
+wa_layout-colwidth_optimize = 'X'.
+* Variable con el nombre del programa
+g_repid = sy-repid.
+* Datos del fieldcat para el ALV
+wa_fieldcat-fieldname = 'CARRID'. "Nombre del campo de la tabla
+wa_fieldcat-seltext_m = 'Compañía'. "Descripción media
+wa_fieldcat-seltext_s = 'Comp.'. "Descripción corta
+APPEND wa_fieldcat TO it_fieldcat.
+wa_fieldcat-fieldname = 'CONNID'.
+wa_fieldcat-seltext_m = 'Nº vuelo'.
+wa_fieldcat-seltext_s = 'Vuelo'.
+APPEND wa_fieldcat TO it_fieldcat.
+wa_fieldcat-fieldname = 'FLDATE'.
+wa_fieldcat-seltext_m = 'Fecha de vuelo'.
+wa_fieldcat-seltext_s = 'Fecha'.
+APPEND wa_fieldcat TO it_fieldcat.
+wa_fieldcat-fieldname = 'PRICE'.
+wa_fieldcat-seltext_m = 'Tarifa de vuelo'.
+wa_fieldcat-seltext_s = 'Tarifa'.
+APPEND wa_fieldcat TO it_fieldcat.
+
+
+
+* Función ALV
+CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+  EXPORTING
+    i_callback_program     = g_repid
+    i_callback_top_of_page = 'MI_CABECERA'
+    is_layout              = wa_layout
+    it_fieldcat            = it_fieldcat[]
+  TABLES
+    t_outtab               = it_sflight[]
+  EXCEPTIONS
+    program_error          = 1
+    OTHERS                 = 2.
+IF sy-subrc <> 0.
+  MESSAGE 'Reporte no generado' TYPE 'I'.
+ENDIF.
+*&--------------------------------------------------------------------
+*
+*& Form mi_CABECERA
+*&--------------------------------------------------------------------
+*
+*
+*---------------------------------------------------------------------
+*
+FORM mi_CABECERA.
+* Declaracion de datos para ALV Header
+DATA: l_it_header   TYPE slis_t_listheader,
+      l_st_header   TYPE slis_listheader,
+      l_it_line     LIKE l_st_header-info,
+      ld_lines      TYPE i,
+      ld_linesc(10) TYPE c.
+* Tipo H para escribir con la fuente grande
+l_st_header-typ = 'H'.
+l_st_header-info = 'DATOS DE SFLIGHT'.
+APPEND l_st_header TO l_it_header.
+CLEAR l_st_header.
+* Tipo S para indicar parámetro clave y su valor (fecha)
+l_st_header-typ = 'S'. "Selection
+l_st_header-key = 'Fecha: '.
+CONCATENATE sy-datum+6(2) '.'
+sy-datum+4(2) '.'
+sy-datum(4) INTO l_st_header-info. "Fecha de hoy
+APPEND l_st_header TO l_it_header.
+CLEAR: l_st_header.
+* Tipo A para escribir en cursiva
+l_st_header-typ = 'H'. "Action
+l_st_header-info = 'Test de ALV con cabecera'.
+APPEND l_st_header TO l_it_header.
+CLEAR: l_st_header.
+CALL FUNCTION 'REUSE_ALV_COMMENTARY_WRITE'
+  EXPORTING
+    it_list_commentary = l_it_header[]
+    i_logo             = 'ENJOYSAP_LOGO'.
+ENDFORM. "mi_cabecera
